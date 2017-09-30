@@ -24,6 +24,7 @@ type KubeLego interface {
 	LegoServiceNameNginx() string
 	LegoServiceNameGce() string
 	LegoDefaultIngressClass() string
+	LegoDefaultIngressProvider() string
 	LegoSupportedIngressClass() []string
 	LegoSupportedIngressProvider() []string
 	LegoCheckInterval() time.Duration

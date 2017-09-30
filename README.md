@@ -113,6 +113,7 @@ Please note:
 | `LEGO_CHECK_INTERVAL` | n | `8h` | Interval for periodically certificate checks (to find expired certs)|
 | `LEGO_MINIMUM_VALIDITY` | n | `720h` (30 days) | Request a renewal when the remaining certificate validity falls below that value|
 | `LEGO_DEFAULT_INGRESS_CLASS` | n | `nginx` | Default ingress class for resources without specification|
+| `LEGO_DEFAULT_INGRESS_PROVIDER` | n | `$LEGO_DEFAULT_INGRESS_CLASS` | Default ingress provider for resources without specification|
 | `LEGO_KUBE_API_URL` | n | `http://127.0.0.1:8080` | API server URL |
 | `LEGO_LOG_LEVEL` | n | `info` | Set log level (`debug`, `info`, `warn` or `error`) |
 | `LEGO_LOG_TYPE` | n | `text` | Set log type. Only `json` as custom value supported, everything else defaults to default logrus textFormat |
