@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jetstack/kube-lego/pkg/kubelego_const"
+	kubelego "github.com/jetstack/kube-lego/pkg/kubelego_const"
 
 	"github.com/Sirupsen/logrus"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -175,9 +175,7 @@ func (i *Ingress) IngressClass() string {
 func (i *Ingress) IngressProvider() string {
 	val, ok := i.IngressApi.Annotations[kubelego.AnnotationIngressProvider]
 	if !ok {
-		// we return IngressClass() here in order to not break backwards
-		// compatibility with older versions of kube-lego
-		return i.IngressClass()
+		return i.kubelego.LegoDefaultIngressProvider()
 	}
 	return strings.ToLower(val)
 }

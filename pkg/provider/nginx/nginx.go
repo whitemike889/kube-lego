@@ -2,7 +2,7 @@ package nginx
 
 import (
 	"github.com/jetstack/kube-lego/pkg/ingress"
-	"github.com/jetstack/kube-lego/pkg/kubelego_const"
+	kubelego "github.com/jetstack/kube-lego/pkg/kubelego_const"
 	"github.com/jetstack/kube-lego/pkg/service"
 
 	"sort"
@@ -123,7 +123,7 @@ func (p *Nginx) updateIngress() error {
 		// TODO: use the ingres class as specified on the ingress we are
 		// requesting a certificate for
 		kubelego.AnnotationIngressClass:         p.kubelego.LegoDefaultIngressClass(),
-		kubelego.AnnotationIngressProvider:      "nginx",
+		kubelego.AnnotationIngressProvider:      p.kubelego.LegoDefaultIngressProvider(),
 		kubelego.AnnotationWhitelistSourceRange: "0.0.0.0/0,::/0",
 	}
 

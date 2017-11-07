@@ -196,6 +196,10 @@ func (kl *KubeLego) LegoDefaultIngressClass() string {
 	return kl.legoDefaultIngressClass
 }
 
+func (kl *KubeLego) LegoDefaultIngressProvider() string {
+	return kl.legoDefaultIngressProvider
+}
+
 func (kl *KubeLego) LegoIngressNameNginx() string {
 	return kl.legoIngressNameNginx
 }
@@ -310,6 +314,22 @@ func (kl *KubeLego) paramsLego() error {
 			return fmt.Errorf("Unsupported default ingress class: '%s'. You can set the ingress class with 'LEGO_DEFAULT_INGRESS_CLASS'", legoDefaultIngressClass)
 		}
 	}
+
+	legoDefaultIngressProvider := os.Getenv("LEGO_DEFAULT_INGRESS_PROVIDER")
+	if len(legoDefaultIngressProvider) == 0 {
+		/*
+			To support backwards compatability we need to set the default provier
+			to the same as the default class
+		*/
+		kl.legoDefaultIngressProvider = kl.legoDefaultIngressClass
+	} else {
+		var err error = nil
+		kl.legoDefaultIngressProvider, err = ingress.IsSupportedIngressProvider(kl.legoSupportedIngressProvider, legoDefaultIngressProvider)
+		if err != nil {
+			return fmt.Errorf("Unsupported default ingress provider: '%s'. You can set the ingress provider with 'LEGO_DEFAULT_INGRESS_PROVIDER'", legoDefaultIngressProvider)
+		}
+	}
+
 	kl.legoIngressNameNginx = os.Getenv("LEGO_INGRESS_NAME_NGINX")
 	if len(kl.legoIngressNameNginx) == 0 {
 		kl.legoIngressNameNginx = os.Getenv("LEGO_INGRESS_NAME")
