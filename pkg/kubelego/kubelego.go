@@ -271,6 +271,9 @@ func (kl *KubeLego) paramsLego() error {
 	if len(kl.legoURL) == 0 {
 		kl.legoURL = "https://acme-staging.api.letsencrypt.org/directory"
 	}
+	if strings.HasSuffix(kl.legoURL, "/") {
+		kl.legoURL = kl.legoURL[:len(kl.legoURL)-1]
+	}
 
 	kl.legoSecretName = os.Getenv("LEGO_SECRET_NAME")
 	if len(kl.legoSecretName) == 0 {
