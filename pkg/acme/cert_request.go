@@ -13,11 +13,12 @@ import (
 	"net/url"
 	"sync"
 
+	"time"
+
 	"github.com/cenk/backoff"
 	"github.com/jetstack/kube-lego/pkg/kubelego_const"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/net/context"
-	"time"
 )
 
 func (a *Acme) ensureAcmeClient() error {
@@ -66,9 +67,7 @@ func (a *Acme) testReachablilty(domain string) error {
 	}
 
 	if string(idReceived) != a.id {
-		if err != nil {
-			return fmt.Errorf("received id (%s) did not match expected (%s)", idReceived, a.id)
-		}
+		return fmt.Errorf("received id (%s) did not match expected (%s)", idReceived, a.id)
 	}
 	return nil
 }
