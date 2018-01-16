@@ -23,6 +23,7 @@ kubectl apply -f nginx/default-service.yaml
 ```
 kubectl apply -f nginx/configmap.yaml
 kubectl apply -f nginx/service.yaml
+kubectl apply -f nginx/rbac.yaml
 kubectl apply -f nginx/deployment.yaml
 ```
 
@@ -50,7 +51,13 @@ kubectl apply -f echoserver/ingress-notls.yaml
 # Enable kube-lego
 
 ```
+# ConfigMap (please setup you KUBE_LEGO EMAIL before deploying)
 kubectl apply -f lego/configmap.yaml
+# RBAC objects
+kubectl apply -f lego/service-account.yaml
+kubectl apply -f lego/cluster-role.yaml
+kubectl apply -f lego/cluster-role-binding.yaml
+# Deployment
 kubectl apply -f lego/deployment.yaml
 ```
 - Change the email address in `lego/configmap.yaml` before creating the

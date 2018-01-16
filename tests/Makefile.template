@@ -26,6 +26,7 @@ TEST_NAME := $(shell pwd | xargs basename)
 .kubeconfig:
 	gcloud container clusters get-credentials --project ${PROJECT} --zone ${DEFAULT_ZONE} $(shell terraform output cluster_name)
 	kubectl get nodes > /dev/null
+	kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(shell gcloud config get-value core/account) --dry-run -o yaml | kubectl apply -f -
 
 .terraform_cluster_ips.tfvars: .terraform_cluster_ips.tfvars_${TEST_NAME}
 	cat .terraform_cluster_ips.tfvars_${TEST_NAME} > $@
