@@ -33,6 +33,10 @@ resource "google_container_cluster" "e2e-test" {
 
   description = "e2e test for kube-lego"
 
+  enable_legacy_abac = false
+
+  min_master_version = "1.8.6-gke.0"
+
   node_config {
     machine_type = "n1-standard-1"
 

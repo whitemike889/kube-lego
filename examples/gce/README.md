@@ -11,6 +11,10 @@ This examples runs kube-lego in a separate namespace
 kubectl apply -f lego/00-namespace.yaml
 # ConfigMap (please setup you KUBE_LEGO EMAIL before deploying)
 kubectl apply -f lego/configmap.yaml 
+# RBAC objects
+kubectl apply -f lego/service-account.yaml
+kubectl apply -f lego/cluster-role.yaml
+kubectl apply -f lego/cluster-role-binding.yaml
 # Deployment
 kubectl apply -f lego/deployment.yaml
 # Service is created by kube-lego in every used namespace
