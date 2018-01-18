@@ -1,5 +1,17 @@
 # kube-lego
 
+>  :warning:
+>
+>  kube-lego is in maintenance mode only. There is no plan to support any new
+>  features. The last official kubernetes release that kube-lego officially
+>  supports is **1.8**.  The officially endorsed successor is
+>  **[cert-manager](https://github.com/jetstack/cert-manager/)**.
+>
+>  TODO: Migration guide in cert-manager
+>
+>  :warning:
+
+
 *kube-lego* automatically requests certificates for Kubernetes Ingress resources from Let's Encrypt
 
 [![Build Status](https://travis-ci.org/jetstack/kube-lego.svg?branch=master)](https://travis-ci.org/jetstack/kube-lego)
