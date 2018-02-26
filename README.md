@@ -151,7 +151,7 @@ Additionally, be aware of the automatically created resources (see environment v
 
 Possible resources for *help*:
 
-* The official channel `#kube-lego` on `kubernetes.slack.com`
+* The official channel ~~`#kube-lego`~~ `#cert-manager` on `kubernetes.slack.com` (The old channel was renamed)
 
 > There is also a good chance to get some support on non-official support
 > channels for *kube-lego*, but be aware that these are rather general
