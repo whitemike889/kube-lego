@@ -91,10 +91,10 @@ Please note:
 
 ### Switching from staging to production
 At some point you'll be ready to use LetsEncrypt production API URL. To make the switch in kube-lego, please do the following:
-* Update `LEGO_URL` to `https://acme-v01.api.letsencrypt.org/directory`
-* Delete delete the existing k8s secret `kube-lego-account`
-* Delete other secrets that hold data for certificates you want to replace
-* Restart kube-lego
+* Update `LEGO_URL` to `https://acme-v01.api.letsencrypt.org/directory`.
+* Delete the existing k8s secret `kube-lego-account`.
+* Delete other secrets that hold data for certificates you want to replace.
+* Restart kube-lego.
 
 ## Ingress controllers
 
