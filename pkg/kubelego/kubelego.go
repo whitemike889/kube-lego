@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	"github.com/jetstack/kube-lego/pkg/provider/gce"
 	"github.com/jetstack/kube-lego/pkg/provider/nginx"
 	"github.com/jetstack/kube-lego/pkg/secret"
+	"github.com/jetstack/kube-lego/pkg/utils"
 
 	log "github.com/Sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -97,6 +99,9 @@ func (kl *KubeLego) Init() {
 		logger.Debug("received signal")
 		kl.Stop()
 	}()
+
+	// set user agent on default http client
+	http.DefaultClient.Transport = utils.UserAgentRoundTripper(http.DefaultTransport, kl.Version())
 
 	// parse env vars
 	err := kl.paramsLego()
