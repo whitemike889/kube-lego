@@ -52,7 +52,7 @@ func IgnoreIngress(ing *k8sExtensions.Ingress) error {
 
 func New(client kubelego.KubeLego, namespace string, name string) *Ingress {
 	ingress := &Ingress{
-		exists:   true,
+		Exists:   true,
 		kubelego: client,
 	}
 
@@ -66,7 +66,7 @@ func New(client kubelego.KubeLego, namespace string, name string) *Ingress {
 					Name:      name,
 				},
 			}
-			ingress.exists = false
+			ingress.Exists = false
 
 		} else {
 			client.Log().Warn("Error while getting ingress: ", err)
@@ -88,7 +88,7 @@ func All(client kubelego.KubeLego) (ingresses []kubelego.Ingress, err error) {
 			ingresses,
 			&Ingress{
 				IngressApi: &ingSlice.Items[i],
-				exists:     true,
+				Exists:     true,
 				kubelego:   client,
 			},
 		)
@@ -100,7 +100,7 @@ var _ kubelego.Ingress = &Ingress{}
 
 type Ingress struct {
 	IngressApi *k8sExtensions.Ingress
-	exists     bool
+	Exists     bool
 	kubelego   kubelego.KubeLego
 }
 
@@ -125,14 +125,14 @@ func (o *Ingress) Save() (err error) {
 
 	// check if it contains rules
 	if len(o.IngressApi.Spec.Rules) > 0 {
-		if o.exists {
+		if o.Exists {
 			obj, err = o.client().Update(o.IngressApi)
 		} else {
 			obj, err = o.client().Create(o.IngressApi)
-			o.exists = true
+			o.Exists = true
 		}
 	} else {
-		if o.exists {
+		if o.Exists {
 			err = o.client().Delete(o.IngressApi.Namespace, &k8sMeta.DeleteOptions{})
 			obj = nil
 		}
@@ -146,7 +146,7 @@ func (o *Ingress) Save() (err error) {
 
 func (i *Ingress) Delete() error {
 
-	if i.IngressApi == nil || !i.exists {
+	if i.IngressApi == nil || !i.Exists {
 		return nil
 	}
 

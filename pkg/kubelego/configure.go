@@ -1,7 +1,6 @@
 package kubelego
 
 import (
-	"github.com/jetstack/kube-lego/pkg/ingress"
 	"github.com/jetstack/kube-lego/pkg/kubelego_const"
 
 	"fmt"
@@ -53,7 +52,7 @@ func (kl *KubeLego) TlsIgnoreDuplicatedSecrets(tlsSlice []kubelego.Tls) []kubele
 	return output
 }
 
-func (kl *KubeLego) processProvider(ings []kubelego.Ingress) (err error) {
+func (kl *KubeLego) processProvider(ing kubelego.Ingress) (err error) {
 
 	for providerName, provider := range kl.legoIngressProvider {
 		err := provider.Reset()
@@ -62,12 +61,10 @@ func (kl *KubeLego) processProvider(ings []kubelego.Ingress) (err error) {
 			continue
 		}
 
-		for _, ing := range ings {
-			if providerName == ing.IngressProvider() {
-				err = provider.Process(ing)
-				if err != nil {
-					provider.Log().Error(err)
-				}
+		if providerName == ing.IngressProvider() {
+			err = provider.Process(ing)
+			if err != nil {
+				provider.Log().Error(err)
 			}
 		}
 
@@ -79,24 +76,13 @@ func (kl *KubeLego) processProvider(ings []kubelego.Ingress) (err error) {
 	return nil
 }
 
-func (kl *KubeLego) reconfigure(ingressesAll []kubelego.Ingress) error {
-	tlsSlice := []kubelego.Tls{}
-	ingresses := []kubelego.Ingress{}
-
-	// filter ingresses, collect tls names
-	for _, ing := range ingressesAll {
-		if ing.Ignore() {
-			continue
-		}
-		tlsSlice = append(tlsSlice, ing.Tls()...)
-		ingresses = append(ingresses, ing)
-	}
-
+func (kl *KubeLego) reconfigure(ing kubelego.Ingress) error {
 	// setup providers
-	kl.processProvider(ingresses)
+	kl.processProvider(ing)
 
 	// normify tls config
-	tlsSlice = kl.TlsIgnoreDuplicatedSecrets(tlsSlice)
+	// NOTE: this no longer performs a global deduplication
+	tlsSlice := kl.TlsIgnoreDuplicatedSecrets(ing.Tls())
 
 	// process certificate validity
 	kl.Log().Info("process certificate requests for ingresses")
@@ -113,15 +99,6 @@ func (kl *KubeLego) reconfigure(ingressesAll []kubelego.Ingress) error {
 	}
 
 	return nil
-}
-
-func (kl *KubeLego) Reconfigure() error {
-	ingressesAll, err := ingress.All(kl)
-	if err != nil {
-		return err
-	}
-
-	return kl.reconfigure(ingressesAll)
 }
 
 func (kl *KubeLego) TlsProcessHosts(tlsSlice []kubelego.Tls) []error {

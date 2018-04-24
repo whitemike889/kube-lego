@@ -27,13 +27,25 @@ func ingressWatchFunc(c *kubernetes.Clientset, ns string) func(options k8sMeta.L
 	}
 }
 
-func (kl *KubeLego) requestReconfigure() {
-	kl.workQueue.Add(true)
+// requestReconfigure will trigger a resync of *all* ingress resources.
+func (kl *KubeLego) requestReconfigure() error {
+	allIng, err := ingress.All(kl)
+	if err != nil {
+		return err
+	}
+	for _, ing := range allIng {
+		key, err := cache.MetaNamespaceKeyFunc(ing.Object)
+		if err != nil {
+			return err
+		}
+		kl.workQueue.AddRateLimited(key)
+	}
+	return nil
 }
 
 func (kl *KubeLego) WatchReconfigure() {
 
-	kl.workQueue = workqueue.New()
+	kl.workQueue = workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Minute*10, time.Hour*24), "kube-lego")
 
 	// handle worker shutdown
 	go func() {
@@ -49,10 +61,35 @@ func (kl *KubeLego) WatchReconfigure() {
 			if quit {
 				return
 			}
-			kl.Log().Debugf("worker: begin processing %v", item)
-			kl.Reconfigure()
-			kl.Log().Debugf("worker: done processing %v", item)
-			kl.workQueue.Done(item)
+			func(item interface{}) {
+				defer kl.workQueue.Done(item)
+				key, ok := item.(string)
+				if !ok {
+					kl.Log().Errorf("worker: invalid item in workqueue: %v", item)
+					kl.workQueue.Forget(item)
+					return
+				}
+				name, namespace, err := cache.SplitMetaNamespaceKey(key)
+				if err != nil {
+					kl.Log().Errorf("worker: invalid string in workqueue: %s", item)
+					kl.workQueue.Forget(item)
+					return
+				}
+				kl.Log().Debugf("worker: begin processing %v", key)
+				ing := ingress.New(kl, namespace, name)
+				if ing.Exists == false {
+					kl.Log().Errorf("worker: ingress for key %q no longer exists. Skipping...", key)
+					kl.workQueue.Forget(item)
+					return
+				}
+				err = kl.reconfigure(ing)
+				if err != nil {
+					kl.Log().Errorf("worker: error processing item: %v", err)
+					return
+				}
+				kl.Log().Debugf("worker: done processing %v", key)
+				kl.workQueue.Forget(item)
+			}(item)
 		}
 	}()
 }
@@ -61,7 +98,7 @@ func (kl *KubeLego) WatchEvents() {
 
 	kl.Log().Debugf("start watching ingress objects")
 
-	resyncPeriod := 60 * time.Second
+	resyncPeriod := 10 * time.Minute
 
 	ingEventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -70,7 +107,12 @@ func (kl *KubeLego) WatchEvents() {
 				return
 			}
 			kl.Log().Debugf("CREATE ingress/%s/%s", addIng.Namespace, addIng.Name)
-			kl.workQueue.Add(true)
+			if key, err := cache.MetaNamespaceKeyFunc(addIng); err != nil {
+				kl.Log().Errorf("worker: failed to key ingress: %v", err)
+				return
+			} else {
+				kl.workQueue.AddRateLimited(key)
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			delIng := obj.(*k8sExtensions.Ingress)
@@ -78,7 +120,12 @@ func (kl *KubeLego) WatchEvents() {
 				return
 			}
 			kl.Log().Debugf("DELETE ingress/%s/%s", delIng.Namespace, delIng.Name)
-			kl.workQueue.Add(true)
+			if key, err := cache.MetaNamespaceKeyFunc(delIng); err != nil {
+				kl.Log().Errorf("worker: failed to key ingress: %v", err)
+				return
+			} else {
+				kl.workQueue.AddRateLimited(key)
+			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
 			oldIng := old.(*k8sExtensions.Ingress)
@@ -94,7 +141,12 @@ func (kl *KubeLego) WatchEvents() {
 					return
 				}
 				kl.Log().Debugf("UPDATE ingress/%s/%s", upIng.Namespace, upIng.Name)
-				kl.workQueue.Add(true)
+				if key, err := cache.MetaNamespaceKeyFunc(upIng); err != nil {
+					kl.Log().Errorf("worker: failed to key ingress: %v", err)
+					return
+				} else {
+					kl.workQueue.AddRateLimited(key)
+				}
 			}
 		},
 	}
