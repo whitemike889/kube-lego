@@ -93,9 +93,6 @@ func (kl *KubeLego) reconfigure(ing kubelego.Ingress) error {
 			errsStr = append(errsStr, fmt.Sprintf("%s", err))
 		}
 		kl.Log().Error("Error while processing certificate requests: ", strings.Join(errsStr, ", "))
-
-		// request a rerun of reconfigure
-		kl.workQueue.Add(true)
 	}
 
 	return nil
