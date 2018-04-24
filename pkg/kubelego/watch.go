@@ -76,18 +76,27 @@ func (kl *KubeLego) WatchReconfigure() {
 					return
 				}
 				kl.Log().Debugf("worker: begin processing %v", key)
+				// attempt to get an internal ingress type.
 				ing := ingress.New(kl, namespace, name)
+				// if it doesn't exist for some reason, exit here and forget the
+				// item from the workqueue.
 				if ing.Exists == false {
 					kl.Log().Errorf("worker: ingress for key %q no longer exists. Skipping...", key)
 					kl.workQueue.Forget(item)
 					return
 				}
+				// attempt to process the ingress
 				err = kl.reconfigure(ing)
 				if err != nil {
-					kl.Log().Errorf("worker: error processing item: %v", err)
+					kl.Log().Errorf("worker: error processing item, requeuing after rate limit: %v", err)
+					// we requeue the item and skip calling Forget here to ensure
+					// a rate limit is applied when adding the item after a failure
+					kl.workQueue.AddRateLimited(key)
 					return
 				}
 				kl.Log().Debugf("worker: done processing %v", key)
+				// as this validation was a success, we should forget the item from
+				// the workqueue.
 				kl.workQueue.Forget(item)
 			}(item)
 		}
@@ -112,6 +121,9 @@ func (kl *KubeLego) WatchEvents() {
 				return
 			} else {
 				kl.Log().Infof("Queued item %q to be processed immediately", key)
+				// immediately queue creation events.
+				// if we called AddRateLimited here, we would initially wait 10m
+				// before processing anything at all.
 				kl.workQueue.Add(key)
 			}
 		},
@@ -125,8 +137,10 @@ func (kl *KubeLego) WatchEvents() {
 				kl.Log().Errorf("worker: failed to key ingress: %v", err)
 				return
 			} else {
-				kl.Log().Infof("Queued item %q to be processed (delay of 10m)", key)
-				kl.workQueue.AddRateLimited(key)
+				kl.Log().Infof("Detected deleted ingress %q - skipping", key)
+				// skip processing deleted items, as there is no reason to due to
+				// the way kube-lego serialises authorization attempts
+				// kl.workQueue.AddRateLimited(key)
 			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
@@ -137,7 +151,10 @@ func (kl *KubeLego) WatchEvents() {
 			oldIng.ResourceVersion = ""
 			upIng.ResourceVersion = ""
 
-			if !reflect.DeepEqual(oldIng, upIng) {
+			// we requeue ingresses only when their spec has changed, as the indicates
+			// a user has updated the specification of their ingress and as such we should
+			// re-trigger a validation if required.
+			if !reflect.DeepEqual(oldIng.Spec, upIng.Spec) {
 				upIng := cur.(*k8sExtensions.Ingress)
 				if ingress.IgnoreIngress(upIng) != nil {
 					return
@@ -147,8 +164,10 @@ func (kl *KubeLego) WatchEvents() {
 					kl.Log().Errorf("worker: failed to key ingress: %v", err)
 					return
 				} else {
-					kl.Log().Infof("Detected deleted ingress %q - skipping", key)
-					// kl.workQueue.Add(key)
+					kl.Log().Infof("Detected spec change - queued ingress %q to be processed", key)
+					// immediately queue the item, as its spec has changed so it may now
+					// be valid
+					kl.workQueue.Add(key)
 				}
 			}
 		},
