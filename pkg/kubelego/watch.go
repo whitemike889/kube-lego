@@ -111,7 +111,8 @@ func (kl *KubeLego) WatchEvents() {
 				kl.Log().Errorf("worker: failed to key ingress: %v", err)
 				return
 			} else {
-				kl.workQueue.AddRateLimited(key)
+				kl.Log().Infof("Queued item %q to be processed immediately", key)
+				kl.workQueue.Add(key)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -124,6 +125,7 @@ func (kl *KubeLego) WatchEvents() {
 				kl.Log().Errorf("worker: failed to key ingress: %v", err)
 				return
 			} else {
+				kl.Log().Infof("Queued item %q to be processed (delay of 10m)", key)
 				kl.workQueue.AddRateLimited(key)
 			}
 		},
@@ -145,7 +147,8 @@ func (kl *KubeLego) WatchEvents() {
 					kl.Log().Errorf("worker: failed to key ingress: %v", err)
 					return
 				} else {
-					kl.workQueue.AddRateLimited(key)
+					kl.Log().Infof("Detected deleted ingress %q - skipping", key)
+					// kl.workQueue.Add(key)
 				}
 			}
 		},
