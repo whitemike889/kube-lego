@@ -2,6 +2,7 @@ package kubelego
 
 import (
 	"github.com/jetstack/kube-lego/pkg/kubelego_const"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"fmt"
 	"strings"
@@ -53,32 +54,37 @@ func (kl *KubeLego) TlsIgnoreDuplicatedSecrets(tlsSlice []kubelego.Tls) []kubele
 }
 
 func (kl *KubeLego) processProvider(ing kubelego.Ingress) (err error) {
-
+	var errs []error
 	for providerName, provider := range kl.legoIngressProvider {
 		err := provider.Reset()
 		if err != nil {
-			provider.Log().Error(err)
-			continue
+			errs = append(errs, err)
 		}
 
 		if providerName == ing.IngressProvider() {
 			err = provider.Process(ing)
 			if err != nil {
-				provider.Log().Error(err)
+				errs = append(errs, err)
 			}
 		}
 
 		err = provider.Finalize()
 		if err != nil {
-			provider.Log().Error(err)
+			errs = append(errs, err)
 		}
 	}
-	return nil
+	return utilerrors.NewAggregate(errs)
 }
 
 func (kl *KubeLego) reconfigure(ing kubelego.Ingress) error {
+	if ing.Ignore() {
+		return nil
+	}
 	// setup providers
-	kl.processProvider(ing)
+	err := kl.processProvider(ing)
+	if err != nil {
+		return err
+	}
 
 	// normify tls config
 	// NOTE: this no longer performs a global deduplication
@@ -88,11 +94,9 @@ func (kl *KubeLego) reconfigure(ing kubelego.Ingress) error {
 	kl.Log().Info("process certificate requests for ingresses")
 	errs := kl.TlsProcessHosts(tlsSlice)
 	if len(errs) > 0 {
-		errsStr := []string{}
-		for _, err := range errs {
-			errsStr = append(errsStr, fmt.Sprintf("%s", err))
-		}
-		kl.Log().Error("Error while processing certificate requests: ", strings.Join(errsStr, ", "))
+		err := utilerrors.NewAggregate(errs)
+		kl.Log().Errorf("Error while processing certificate requests: %v", err)
+		return err
 	}
 
 	return nil

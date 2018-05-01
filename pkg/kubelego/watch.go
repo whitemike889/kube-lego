@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jetstack/kube-lego/pkg/ingress"
+	klconst "github.com/jetstack/kube-lego/pkg/kubelego_const"
 
 	k8sMeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,7 +72,7 @@ func (kl *KubeLego) WatchReconfigure() {
 				}
 				name, namespace, err := cache.SplitMetaNamespaceKey(key)
 				if err != nil {
-					kl.Log().Errorf("worker: invalid string in workqueue: %s", item)
+					kl.Log().Errorf("worker: invalid string in workqueue %q: %v", item, err)
 					kl.workQueue.Forget(item)
 					return
 				}
@@ -141,20 +142,24 @@ func (kl *KubeLego) WatchEvents() {
 				// skip processing deleted items, as there is no reason to due to
 				// the way kube-lego serialises authorization attempts
 				// kl.workQueue.AddRateLimited(key)
+				kl.workQueue.Forget(key)
 			}
 		},
 		UpdateFunc: func(old, cur interface{}) {
 			oldIng := old.(*k8sExtensions.Ingress)
 			upIng := cur.(*k8sExtensions.Ingress)
 
-			//ignore resource version in equality check
-			oldIng.ResourceVersion = ""
-			upIng.ResourceVersion = ""
+			shouldForceProcess := anyDifferent(oldIng.Annotations, upIng.Annotations,
+				klconst.AnnotationIngressClass,
+				klconst.AnnotationIngressProvider,
+				klconst.AnnotationKubeLegoManaged,
+				klconst.AnnotationSslRedirect,
+				klconst.AnnotationWhitelistSourceRange)
 
 			// we requeue ingresses only when their spec has changed, as the indicates
 			// a user has updated the specification of their ingress and as such we should
 			// re-trigger a validation if required.
-			if !reflect.DeepEqual(oldIng.Spec, upIng.Spec) {
+			if !reflect.DeepEqual(oldIng.Spec, upIng.Spec) || shouldForceProcess {
 				upIng := cur.(*k8sExtensions.Ingress)
 				if ingress.IgnoreIngress(upIng) != nil {
 					return
@@ -184,4 +189,22 @@ func (kl *KubeLego) WatchEvents() {
 	)
 
 	go controller.Run(kl.stopCh)
+}
+
+// anyDifferent returns true if any of the keys passed are different in the given
+// map.
+func anyDifferent(left, right map[string]string, keys ...string) bool {
+	// if either left or right are nil, and the other isn't, then
+	// return true to kick off re-processing
+	if left == nil && right == nil ||
+		left == nil && right != nil ||
+		left != nil && right == nil {
+		return true
+	}
+	for _, k := range keys {
+		if left[k] != right[k] {
+			return true
+		}
+	}
+	return false
 }
