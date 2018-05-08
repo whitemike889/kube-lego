@@ -50,5 +50,5 @@ type KubeLego struct {
 	waitGroup sync.WaitGroup
 
 	// work queue
-	workQueue *workqueue.Type
+	workQueue workqueue.RateLimitingInterface
 }
