@@ -70,7 +70,7 @@ func (kl *KubeLego) WatchReconfigure() {
 					kl.workQueue.Forget(item)
 					return
 				}
-				name, namespace, err := cache.SplitMetaNamespaceKey(key)
+				namespace, name, err := cache.SplitMetaNamespaceKey(key)
 				if err != nil {
 					kl.Log().Errorf("worker: invalid string in workqueue %q: %v", item, err)
 					kl.workQueue.Forget(item)
